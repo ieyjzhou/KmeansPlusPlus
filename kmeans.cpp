@@ -5,8 +5,8 @@
 #include <fstream>
 #include <iomanip>
 #include"kmeans.h"
-
-
+#include "simple_svg.hpp"
+#include <map>
 
 
 #ifdef USING_OMP
@@ -61,31 +61,40 @@ void  Kmeans::InitCenters()
 #ifdef USING_OMP
 #pragma ompparallel for 
 #endif
+	std::map<int, int> uniqueMap;
+	while (uniqueMap.size() < _K)
+	{
+		int id = distribution(gen);
+		uniqueMap.insert(std::pair<int, int>(id, id));
+	}
+	std::map<int, int>::iterator itMap = uniqueMap.begin();
 	for (int i = 0; i < _K; i++)
 	{
 
-		int id = distribution(gen);
+		int id = itMap->first;
 		std::list<Point>::iterator it = _Points.begin();
-		std::advance(it, id);
-		
-		/*int count = 0;
-		while (count!=id)
+		//std::advance(it, id);
+
+		int count = 0;
+		while (count != id)
 		{
-		it++;
-		count++;
-		}*/
+			it++;
+			count++;
+		}
 		_Centers.push_back(*it);
+
+		itMap++;
 	}
 }
 void Kmeans::InitPoints(std::list<Point> & pointlist)
 {
-	_Centers.assign(pointlist.begin(), pointlist.end());
+	_Points.assign(pointlist.begin(), pointlist.end());
 	_PointNumber = pointlist.size();
 }
-int   Kmeans::NearestCenter(Point &p, float &minDistance)
+int   Kmeans::NearestCenter(Point &p)
 {
 	
-	minDistance = std::numeric_limits<float>::max();
+	float minDistance = std::numeric_limits<float>::max();
 	int k_id = -1;
 	float dis;
 	std::list<Point>::iterator centersIter = _Centers.begin();
@@ -107,14 +116,14 @@ void  Kmeans::Cluster()
 {
 	
 	std::list<Point>::iterator pointsIter = _Points.begin();
-	std::list<Point>::iterator centersIter = _Centers.begin();
+
 #ifdef USING_OMP
 #pragma ompparallel for 
 #endif
 	float minDistance;
 	for (int p = 0; p < _PointNumber; p++, pointsIter++)
 	{
-		pointsIter->_group = NearestCenter(*pointsIter, minDistance);
+		pointsIter->_group = NearestCenter(*pointsIter);
 				 
 	}
 }
@@ -241,6 +250,69 @@ void Kmeans::SaveEPS(std::string fileName)
 	{
 		std::cout <<fileName.c_str() << " error opening file\n";
 	}
+}
+void Kmeans::SaveSVG(std::string fileName)
+{
+	int W = 1000;
+	int H = 1000;
+	svg::Dimensions dimensions(W, H);
+	svg::Document doc(fileName.c_str(), svg::Layout(dimensions, svg::Layout::BottomLeft));
+
+	svg::Color pointColor(svg::Color::Red);
+	svg::Color centerColor(svg::Color::Green);
+	float min_x, max_x, min_y, max_y, scale, cx, cy;
+	float *colors = new float[_K * 3];
+
+	for (int i = 0; i < _K; i++)
+	{
+		colors[3 * i + 0] = (3 * (i + 1) % 11) / 11.;
+		colors[3 * i + 1] = (7 * i % 11) / 11.;
+		colors[3 * i + 2] = (9 * i % 11) / 11.;
+	}
+	max_x = max_y = -(min_x = min_y = HUGE_VAL);
+	std::list<Point>::iterator pointsIter = _Points.begin();
+	for (int j = 0; j < _PointNumber; j++, pointsIter++)
+	{
+		if (max_x < pointsIter->_x) max_x = pointsIter->_x;
+		if (min_x > pointsIter->_x) min_x = pointsIter->_x;
+		if (max_y < pointsIter->_y) max_y = pointsIter->_y;
+		if (min_y > pointsIter->_y) min_y = pointsIter->_y;
+	}
+	scale = W / (max_x - min_x);
+	if (scale > H / (max_y - min_y))
+		scale = H / (max_y - min_y);
+	cx = (max_x + min_x) / 2.0;
+	cy = (max_y + min_y) / 2.0;
+	
+	
+	std::list<Point>::iterator centerIter = _Centers.begin();
+	for (int k = 0; k < _K; k++, centerIter++)
+	{
+		int r = colors[3 * k]*255;
+		int g = colors[3 * k + 1] * 255;
+		int b = colors[3 * k + 2] * 255;
+		svg::Color c(r, g, b);
+		
+		pointsIter = _Points.begin();
+		for (int j = 0; j < _PointNumber; j++, pointsIter++)
+		{
+			if (pointsIter->_group != k)
+				continue;
+			doc << svg::Circle(svg::Point((pointsIter->_x - cx) * scale + W / 2, (pointsIter->_y - cy) * scale + H / 2), 1, svg::Fill(svg::Color::White), svg::Stroke(1, c));
+
+		}
+		doc << svg::Rectangle(svg::Point((centerIter->_x - cx) * scale + W / 2, (centerIter->_y - cy) * scale + H / 2), 5,5, svg::Fill(svg::Color::White), svg::Stroke(2, c));
+	}
+
+	
+	
+	
+	
+
+
+
+
+	doc.save();
 }
 void Kmeans::PrintPointLis(std::list<Point> & pointList)
 {

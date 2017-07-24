@@ -34,6 +34,7 @@ int main()
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
 	std::cout << "calculate time " << duration << std::endl;
 	kmeansPlusPlus.SaveEPS("S1_++.eps");
+	kmeansPlusPlus.SaveSVG("S1_++.svg");
 	system("pause");
 	return 1;
 }

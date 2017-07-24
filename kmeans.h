@@ -31,11 +31,12 @@ public:
 	void InitPoints(std::string fileName);
 	void InitCenters();
 	void InitSpecifiedCenters();
-	int NearestCenter(Point &p, float &minDistance);
+	int NearestCenter(Point &p);
 	void RunKmean();
 	void Cluster();
 	void Center();
 	void SaveEPS(std::string fileName);
+	void SaveSVG(std::string fileName);
 	void PrintPointLis(std::list<Point> & pointList);
 public:
 	std::list<Point> _Points;
@@ -46,3 +47,4 @@ public:
 	
 } ;
 #endif
+
