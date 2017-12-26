@@ -310,7 +310,7 @@ void Kmeans::SaveSVG(std::string fileName)
 	
 
 
-
+delete colors;
 
 	doc.save();
 }
